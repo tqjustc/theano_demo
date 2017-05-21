@@ -20,7 +20,7 @@ zMat = np.random.random((2, 3, 10))
 res = func1(hMat, zMat)
 print(res)
 
-print('Numpy:')
+print('Numpy Testing:')
 # verify it using Numpy only
 resNp = np.zeros((hMat.shape[0], zMat.shape[1]))
 for i in range(hMat.shape[0]):
