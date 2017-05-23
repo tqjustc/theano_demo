@@ -2,30 +2,48 @@
 import pdb
 import theano
 import theano.tensor as T
-import numpy as np
+import numpy
+from theano.ifelse import ifelse
+from theano import scan_module
+
+x = T.matrix("x")
 
 
-H = T.dtensor3('H')
-Z = T.dtensor3('Z')
-ZT = T.transpose(Z, (0, 2, 1))
-HZ = T.batched_dot(H, ZT)
-result = T.reshape(HZ, (HZ.shape[0], HZ.shape[2]))
-func1 = theano.function(inputs=[H, Z], outputs=result)
+# Function to loop through every element in a given row
+def scanElemInRow(value, preVal):
+    tmpVal = preVal
+    preVal = ifelse(T.gt(value, 0.5), preVal + 1, preVal)
+    return preVal, scan_module.until(T.eq(preVal, tmpVal))
 
 
-# input:
-hMat = np.random.random((2, 1, 10))
-zMat = np.random.random((2, 3, 10))
+# Function to loop through every row of a matrix
+def scanRow(row):
+    count, updates = theano.scan(scanElemInRow,
+                                 sequences=[row],
+                                 outputs_info=T.constant(0, dtype=theano.config.floatX),
 
-res = func1(hMat, zMat)
-print(res)
+                                 non_sequences=None)
+    count = count[-1]
+    return count
 
-print('Numpy Testing :')
-# verify it using Numpy only
-resNp = np.zeros((hMat.shape[0], zMat.shape[1]))
-for i in range(hMat.shape[0]):
-    zi = zMat[i,:,:]
-    resNp[i, :] = np.dot(hMat[i, :, :], np.transpose(zi, (1, 0)))
-print(resNp)
+
+y, updates = theano.scan(scanRow,
+                         sequences=[x],
+
+                         outputs_info=None,
+                         non_sequences=None)
+
+fn1 = theano.function([x], y)
+
+arr = numpy.asarray([[0.1, 0.2, 0.3],
+                     [0.6, 0.3, 0.9],
+                     [0.6, 0.7, 0.8]])
+print(fn1(arr))
+
+
+
+
+print(arr.sum())
+
 
 print('end.')
