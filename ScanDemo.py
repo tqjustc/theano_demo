@@ -2,48 +2,41 @@
 import pdb
 import theano
 import theano.tensor as T
-import numpy
+import numpy as np
 from theano.ifelse import ifelse
 from theano import scan_module
 
-x = T.matrix("x")
+'''
+1. Loop for every row
+2. For a given row, loop through the elements.
+   2.1 Count the number of elements > 0.5
+   2.2 If we come across any element < 0.5, STOP
 
+Output:
+For row 1 the count is 0, as no element(starting from left) is greater than 0.
+For row 2 the count is 1, (0.6 > 0.5 but we stop at 0.3)
+For row 3 the count is 3, as all elements starting from left are greater than 0.5
+'''
 
-# Function to loop through every element in a given row
-def scanElemInRow(value, preVal):
-    tmpVal = preVal
-    preVal = ifelse(T.gt(value, 0.5), preVal + 1, preVal)
-    return preVal, scan_module.until(T.eq(preVal, tmpVal))
+x = T.matrix('x')
 
+def myFunc(val, preval):
+    val1 = preval
+    preval = ifelse(T.gt(val, 0.5), preval+1, preval)
+    return preval, scan_module.until(T.eq(val1, preval))
 
-# Function to loop through every row of a matrix
-def scanRow(row):
-    count, updates = theano.scan(scanElemInRow,
-                                 sequences=[row],
-                                 outputs_info=T.constant(0, dtype=theano.config.floatX),
+def oneRow(row):
+    result, updates = theano.scan(fn = myFunc,
+                                  sequences=[row],
+                                  outputs_info=0
+                                  )
+    return result[-1]
 
-                                 non_sequences=None)
-    count = count[-1]
-    return count
+result, updates = theano.scan(fn=oneRow, sequences=[x])
 
+fn1 = theano.function(inputs=[x], outputs=result)
 
-y, updates = theano.scan(scanRow,
-                         sequences=[x],
+xx = np.random.random((3,4))
+print(xx)
 
-                         outputs_info=None,
-                         non_sequences=None)
-
-fn1 = theano.function([x], y)
-
-arr = numpy.asarray([[0.1, 0.2, 0.3],
-                     [0.6, 0.3, 0.9],
-                     [0.6, 0.7, 0.8]])
-print(fn1(arr))
-
-
-
-
-print(arr.sum())
-
-
-print('end.')
+print(fn1(xx))
